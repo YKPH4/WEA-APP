@@ -15,10 +15,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.smarthome.ui.LoginScreen
 import com.example.smarthome.ui.RegisterScreen
 import com.example.smarthome.ui.SmartHomeScreen
+import com.example.smarthome.ui.WelcomeScreen
 import com.example.smarthome.ui.theme.SmarthomeTheme
 import com.example.smarthome.ui.viewmodel.SmarthomeViewModel
 
 enum class Screen {
+    Welcome,
     Register,
     Login,
     Home
@@ -30,7 +32,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             SmarthomeTheme {
-                var currentScreen by remember { mutableStateOf(Screen.Register) }
+                var currentScreen by remember { mutableStateOf(Screen.Welcome) }
                 val smarthomeViewModel: SmarthomeViewModel = viewModel()
 
                 Crossfade(
@@ -39,22 +41,30 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize()
                 ) { screen ->
                     when (screen) {
+                        Screen.Welcome -> {
+                            WelcomeScreen(
+                                onNavigateToRegister = { currentScreen = Screen.Register },
+                                onNavigateToLogin = { currentScreen = Screen.Login }
+                            )
+                        }
                         Screen.Register -> {
                             RegisterScreen(
                                 onNavigateToLogin = { currentScreen = Screen.Login },
-                                onRegisterSuccess = { currentScreen = Screen.Home }
+                                onRegisterSuccess = { currentScreen = Screen.Home },
+                                onNavigateToWelcome = { currentScreen = Screen.Welcome }
                             )
                         }
                         Screen.Login -> {
                             LoginScreen(
                                 onNavigateToRegister = { currentScreen = Screen.Register },
-                                onLoginSuccess = { currentScreen = Screen.Home }
+                                onLoginSuccess = { currentScreen = Screen.Home },
+                                onNavigateToWelcome = { currentScreen = Screen.Welcome }
                             )
                         }
                         Screen.Home -> {
                             SmartHomeScreen(
                                 viewModel = smarthomeViewModel,
-                                onLogout = { currentScreen = Screen.Login }
+                                onLogout = { currentScreen = Screen.Welcome }
                             )
                         }
                     }

@@ -37,6 +37,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.painterResource
+import com.example.smarthome.R
 import com.example.smarthome.data.repository.SmarthomeRepository
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
@@ -58,11 +60,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.smarthome.ui.theme.SmarthomeTheme
+import com.example.smarthome.ui.theme.Subtext
 
 @Composable
 fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
     onRegisterSuccess: () -> Unit,
+    onNavigateToWelcome: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var nombre by remember { mutableStateOf("") }
@@ -91,11 +95,11 @@ fun RegisterScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = onNavigateToLogin,
+                    onClick = onNavigateToWelcome,
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        imageVector = BackArrowIcon,
+                        painter = painterResource(id = R.drawable.chevrolet),
                         contentDescription = "Volver",
                         tint = Burgundy,
                         modifier = Modifier.size(24.dp)
@@ -112,7 +116,7 @@ fun RegisterScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(30.dp))
 
             // Text Fields
             CustomOutlinedTextField(
@@ -148,24 +152,7 @@ fun RegisterScreen(
                 isPassword = true
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Password rules section
-            Column(modifier = Modifier.padding(start = 4.dp)) {
-                Text(
-                    text = "La contraseña debe contener:",
-                    fontSize = 13.sp,
-                    color = TextGray,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                PasswordRequirementItem("Minimo de 8-16 digitos")
-                PasswordRequirementItem("Una letra en mayuscula")
-                PasswordRequirementItem("Numero")
-                PasswordRequirementItem("Contener caracter especial -_&/!*#")
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
             // Escanear rostro Button
             Box(
@@ -189,10 +176,11 @@ fun RegisterScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Checkbox and Terms
             Row(
+                horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -205,41 +193,41 @@ fun RegisterScreen(
                     imageVector = Icons.Default.Check,
                     contentDescription = "Aceptar",
                     tint = Burgundy,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(10.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Row {
                     Text(
                         text = "Aceptar ",
-                        fontSize = 13.sp,
-                        color = TextSubDark
+                        fontSize = 10.sp,
+                        color = Subtext
                     )
                     Text(
                         text = "Politicas de Privacidad",
-                        fontSize = 13.sp,
-                        color = TextSubDark,
+                        fontSize = 10.sp,
+                        color = Subtext,
                         textDecoration = TextDecoration.Underline
                     )
                     Text(
                         text = " y ",
-                        fontSize = 13.sp,
+                        fontSize = 10.sp,
                         color = TextSubDark
                     )
                     Text(
                         text = "Terminos de Uso",
-                        fontSize = 13.sp,
+                        fontSize = 10.sp,
                         color = TextSubDark,
                         textDecoration = TextDecoration.Underline
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(180.dp))
 
             // "Ya tengo cuenta" Link
             Text(
                 text = "Ya tengo cuenta",
-                fontSize = 14.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextDark,
                 textDecoration = TextDecoration.Underline,
@@ -278,7 +266,7 @@ fun RegisterScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(30.dp))
         }
     }
 }
@@ -430,6 +418,7 @@ val EyeOffIcon: ImageVector
 fun RegisterScreenPreview() {
     SmarthomeTheme {
         RegisterScreen(
+            onNavigateToWelcome = {},
             onNavigateToLogin = {},
             onRegisterSuccess = {}
         )

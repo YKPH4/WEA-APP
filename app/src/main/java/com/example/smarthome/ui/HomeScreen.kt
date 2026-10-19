@@ -55,6 +55,8 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import com.example.smarthome.R
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -201,7 +203,7 @@ private fun TopBarSection(
                 modifier = Modifier.size(32.dp)
             ) {
                 Icon(
-                    imageVector = ExitDoorIcon,
+                    painter = painterResource(id = R.drawable.login),
                     contentDescription = "Salir",
                     tint = Burgundy,
                     modifier = Modifier.size(26.dp)
@@ -215,7 +217,7 @@ private fun TopBarSection(
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
-                        imageVector = BackArrowIcon,
+                        painter = painterResource(id = R.drawable.chevrolet),
                         contentDescription = "Volver",
                         tint = Burgundy,
                         modifier = Modifier.size(24.dp)
@@ -588,20 +590,6 @@ private fun CamerasContent() {
         )
 
         Spacer(modifier = Modifier.height(16.dp))
-
-        CameraCard(
-            title = "Sala de estar",
-            subtitle = "0 personas detectadas",
-            thumbnailContent = { LivingRoomThumbnail() }
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        CameraCard(
-            title = "Jardín posterior",
-            subtitle = "Sin movimiento",
-            thumbnailContent = { GardenThumbnail() }
-        )
     }
 }
 
@@ -610,85 +598,7 @@ private fun CameraCard(
     title: String,
     subtitle: String,
     thumbnailContent: @Composable () -> Unit
-) {
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = Color.White,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .clip(RoundedCornerShape(14.dp))
-            ) {
-                thumbnailContent()
-
-                // "EN VIVO" Badge
-                Surface(
-                    color = Color.Black.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(Color.Red, CircleShape)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "EN VIVO",
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = title,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextDark
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = subtitle,
-                        fontSize = 13.sp,
-                        color = TextGray
-                    )
-                }
-
-                Icon(
-                    imageVector = ApertureCameraIcon,
-                    contentDescription = "Ver transmisión",
-                    tint = Burgundy,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-    }
-}
+){}
 
 // USERS CONTENT
 @Composable
@@ -1147,14 +1057,6 @@ private fun ActivityContent(
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
-
-                // Activity Item 2
-                ActivityCard(
-                    title = "Sala de estar",
-                    subtitle = "0 personas detectadas",
-                    time = "15:30",
-                    thumbnailContent = { LivingRoomThumbnail() }
-                )
             }
 
             Spacer(modifier = Modifier.height(80.dp))
@@ -1193,51 +1095,6 @@ private fun ActivityCard(
     time: String,
     thumbnailContent: @Composable () -> Unit
 ) {
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = Color.White,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(width = 100.dp, height = 75.dp)
-                    .clip(RoundedCornerShape(14.dp))
-            ) {
-                thumbnailContent()
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextDark
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    fontSize = 12.sp,
-                    color = TextGray,
-                    maxLines = 1
-                )
-            }
-
-            Text(
-                text = time,
-                fontSize = 14.sp,
-                color = TextDark,
-                modifier = Modifier.align(Alignment.Top)
-            )
-        }
-    }
 }
 
 // CANVAS THUMBNAILS
@@ -1283,68 +1140,6 @@ fun FrontDoorThumbnail() {
         )
     }
 }
-
-@Composable
-fun LivingRoomThumbnail() {
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val w = size.width
-        val h = size.height
-
-        drawRect(color = Color(0xFF78909C))
-
-        drawRect(
-            color = Color(0xFFD7CCC8),
-            topLeft = Offset(0f, h * 0.65f),
-            size = Size(w, h * 0.35f)
-        )
-
-        drawRoundRect(
-            color = Color(0xFFCFD8DC),
-            topLeft = Offset(w * 0.1f, h * 0.48f),
-            size = Size(w * 0.8f, h * 0.3f),
-            cornerRadius = CornerRadius(12f, 12f)
-        )
-
-        drawRect(
-            color = Color(0xFFB0BEC5),
-            topLeft = Offset(w * 0.2f, h * 0.15f),
-            size = Size(w * 0.25f, h * 0.25f)
-        )
-        drawRect(
-            color = Color(0xFFB0BEC5),
-            topLeft = Offset(w * 0.55f, h * 0.15f),
-            size = Size(w * 0.25f, h * 0.25f)
-        )
-    }
-}
-
-@Composable
-fun GardenThumbnail() {
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val w = size.width
-        val h = size.height
-
-        drawRect(color = Color(0xFFE0F7FA))
-
-        drawRect(
-            color = Color(0xFFA5D6A7),
-            topLeft = Offset(0f, h * 0.5f),
-            size = Size(w, h * 0.5f)
-        )
-
-        drawCircle(
-            color = Color(0xFF66BB6A),
-            radius = w * 0.18f,
-            center = Offset(w * 0.25f, h * 0.35f)
-        )
-        drawCircle(
-            color = Color(0xFF4CAF50),
-            radius = w * 0.22f,
-            center = Offset(w * 0.75f, h * 0.3f)
-        )
-    }
-}
-
 @Composable
 private fun TabRowSection(
     selectedTab: Int,
