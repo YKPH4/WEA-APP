@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -66,6 +68,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.smarthome.ui.theme.SmarthomeTheme
 import com.example.smarthome.ui.viewmodel.SmarthomeViewModel
+import com.example.smarthome.config.CameraConfig
+import com.example.smarthome.ui.components.RtspPlayer
 
 // Colors
 val Burgundy = Color(0xFF7A2024)
@@ -89,7 +93,7 @@ fun SmartHomeScreen(
     val context = LocalContext.current
 
     val isDoorLocked by viewModel.isDoorLocked.collectAsState()
-    val usersList by viewModel.usersList.collectAsState()
+    val perfilesList by viewModel.perfilesList.collectAsState()
     val activitiesList by viewModel.activitiesList.collectAsState()
 
     Surface(
@@ -145,10 +149,10 @@ fun SmartHomeScreen(
                         Toast.LENGTH_LONG
                     ).show()
                 },
-                usersList = usersList,
+                perfilesList = perfilesList,
                 activitiesList = activitiesList,
-                onAddUser = { name, email -> viewModel.addUser(name, email) },
-                onDeleteUser = { userToDelete -> viewModel.deleteUser(userToDelete) }
+                onAddUser = { name, consentimiento -> viewModel.crearPerfil(name, consentimiento) },
+                onDeleteUser = { perfilToDelete -> viewModel.eliminarPerfil(perfilToDelete) }
             )
 
             // Bottom Navigation Bar
@@ -226,7 +230,7 @@ private fun TopBarSection(
                     text = when {
                         isLockDetailOpen -> "Acceso puerta principal"
                         selectedNavIndex == 1 -> "Cámaras"
-                        selectedNavIndex == 2 -> "Usuarios"
+                        selectedNavIndex == 2 -> "Perfiles"
                         selectedNavIndex == 3 -> "Actividad"
                         else -> ""
                     },
@@ -289,10 +293,10 @@ private fun MainContentCard(
     onOpenLockDetail: () -> Unit,
     onChangePasscode: () -> Unit,
     onDownloadActivity: () -> Unit,
-    usersList: List<com.example.smarthome.data.models.UsuarioApp>,
+    perfilesList: List<com.example.smarthome.data.models.PerfilRostro>,
     activitiesList: List<com.example.smarthome.data.models.RegistroActividad>,
-    onAddUser: (String, String) -> Unit,
-    onDeleteUser: (com.example.smarthome.data.models.UsuarioApp) -> Unit
+    onAddUser: (String, Boolean) -> Unit,
+    onDeleteUser: (com.example.smarthome.data.models.PerfilRostro) -> Unit
 ) {
     Surface(
         modifier = modifier,
@@ -317,7 +321,7 @@ private fun MainContentCard(
             }
             selectedNavIndex == 1 -> CamerasContent()
             selectedNavIndex == 2 -> UsersContent(
-                usersList = usersList,
+                perfilesList = perfilesList,
                 onAddUser = onAddUser,
                 onDeleteUser = onDeleteUser
             )
@@ -438,7 +442,6 @@ private fun ChangePasscodeDialog(
     onDismiss: () -> Unit,
     onSave: (String) -> Unit
 ) {
-    var currentCode by remember { mutableStateOf("") }
     var newCode by remember { mutableStateOf("") }
     var confirmCode by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
@@ -456,19 +459,11 @@ private fun ChangePasscodeDialog(
         text = {
             Column(modifier = Modifier.padding(vertical = 8.dp)) {
                 CustomOutlinedTextField(
-                    value = currentCode,
-                    onValueChange = { currentCode = it },
-                    placeholder = "Clave actual",
-                    isPassword = true
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                CustomOutlinedTextField(
                     value = newCode,
                     onValueChange = { newCode = it },
-                    placeholder = "Nueva clave",
-                    isPassword = true
+                    placeholder = "Nueva clave (4 a 8 dígitos)",
+                    isPassword = true,
+                    keyboardType = KeyboardType.Number
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -477,7 +472,8 @@ private fun ChangePasscodeDialog(
                     value = confirmCode,
                     onValueChange = { confirmCode = it },
                     placeholder = "Confirmar nueva clave",
-                    isPassword = true
+                    isPassword = true,
+                    keyboardType = KeyboardType.Number
                 )
 
                 if (errorMessage.isNotEmpty()) {
@@ -493,8 +489,8 @@ private fun ChangePasscodeDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (newCode.isEmpty()) {
-                        errorMessage = "Ingresa la nueva clave"
+                    if (newCode.length !in 4..8) {
+                        errorMessage = "La clave debe tener entre 4 y 8 dígitos"
                     } else if (newCode != confirmCode) {
                         errorMessage = "Las claves no coinciden"
                     } else {
@@ -582,9 +578,14 @@ private fun CamerasContent() {
         Spacer(modifier = Modifier.height(16.dp))
 
         CameraCard(
-            title = "Puerta frontal",
-            subtitle = "Estado: Cerrada/Bloqueada",
-            thumbnailContent = { FrontDoorThumbnail() }
+            title = "Cámara Wansview",
+            subtitle = "Transmisión en vivo",
+            thumbnailContent = {
+                RtspPlayer(
+                    url = CameraConfig.RTSP_URL,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -693,16 +694,13 @@ private fun CameraCard(
 // USERS CONTENT
 @Composable
 private fun UsersContent(
-    usersList: List<com.example.smarthome.data.models.UsuarioApp>,
-    onAddUser: (String, String) -> Unit,
-    onDeleteUser: (com.example.smarthome.data.models.UsuarioApp) -> Unit
+    perfilesList: List<com.example.smarthome.data.models.PerfilRostro>,
+    onAddUser: (String, Boolean) -> Unit,
+    onDeleteUser: (com.example.smarthome.data.models.PerfilRostro) -> Unit
 ) {
     val context = LocalContext.current
     var showAddDialog by remember { mutableStateOf(false) }
-    var userToDelete by remember { mutableStateOf<com.example.smarthome.data.models.UsuarioApp?>(null) }
-
-    val owners = usersList.filter { it.rol.lowercase() == "dueño" }
-    val guests = usersList.filter { it.rol.lowercase() != "dueño" }
+    var perfilToDelete by remember { mutableStateOf<com.example.smarthome.data.models.PerfilRostro?>(null) }
 
     Column(
         modifier = Modifier
@@ -745,9 +743,9 @@ private fun UsersContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Owner Section
+        // Perfiles Registrados Section
         Text(
-            text = "Dueño",
+            text = "Perfiles registrados",
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             color = TextDark
@@ -755,46 +753,18 @@ private fun UsersContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        if (owners.isNotEmpty()) {
-            owners.forEach { owner ->
+        if (perfilesList.isNotEmpty()) {
+            perfilesList.forEach { perfil ->
                 UserRowItem(
-                    name = owner.nombre,
-                    onDelete = { userToDelete = owner }
+                    name = perfil.nombre,
+                    estado = perfil.estado,
+                    onDelete = { perfilToDelete = perfil }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
         } else {
             Text(
-                text = "Sin dueño registrado",
-                fontSize = 14.sp,
-                color = TextGray,
-                modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 4.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Guests Section
-        Text(
-            text = "Invitados",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
-            color = TextDark
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        if (guests.isNotEmpty()) {
-            guests.forEach { guest ->
-                UserRowItem(
-                    name = guest.nombre,
-                    onDelete = { userToDelete = guest }
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-        } else {
-            Text(
-                text = "Sin invitados agregados",
+                text = "Sin perfiles registrados",
                 fontSize = 14.sp,
                 color = TextGray,
                 modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 4.dp)
@@ -806,24 +776,24 @@ private fun UsersContent(
     if (showAddDialog) {
         AddUserDialog(
             onDismiss = { showAddDialog = false },
-            onAddUser = { newName, newEmail ->
+            onAddUser = { newName, consentimiento ->
                 showAddDialog = false
-                onAddUser(newName, newEmail)
-                Toast.makeText(context, "Usuario agregado exitosamente", Toast.LENGTH_SHORT).show()
+                onAddUser(newName, consentimiento)
+                Toast.makeText(context, "Perfil agregado exitosamente", Toast.LENGTH_SHORT).show()
             }
         )
     }
 
     // Delete User Confirmation Dialog
-    if (userToDelete != null) {
+    if (perfilToDelete != null) {
         DeleteUserConfirmationDialog(
-            userName = userToDelete!!.nombre,
-            onDismiss = { userToDelete = null },
+            userName = perfilToDelete!!.nombre,
+            onDismiss = { perfilToDelete = null },
             onConfirmDelete = {
-                val target = userToDelete!!
-                userToDelete = null
+                val target = perfilToDelete!!
+                perfilToDelete = null
                 onDeleteUser(target)
-                Toast.makeText(context, "Usuario eliminado de los accesos", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Perfil eliminado de los accesos", Toast.LENGTH_SHORT).show()
             }
         )
     }
@@ -832,10 +802,10 @@ private fun UsersContent(
 @Composable
 private fun AddUserDialog(
     onDismiss: () -> Unit,
-    onAddUser: (String, String) -> Unit
+    onAddUser: (String, Boolean) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    var consentimiento by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     val context = LocalContext.current
 
@@ -843,7 +813,7 @@ private fun AddUserDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Agregar nuevo usuario",
+                text = "Agregar nuevo perfil",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextDark,
@@ -866,12 +836,22 @@ private fun AddUserDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                CustomOutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    placeholder = "Email",
-                    keyboardType = KeyboardType.Email
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = consentimiento,
+                        onCheckedChange = { consentimiento = it },
+                        colors = CheckboxDefaults.colors(checkedColor = Burgundy)
+                    )
+                    Text(
+                        text = "Autorizo el escaneo y almacenamiento de datos faciales para el control de acceso.",
+                        fontSize = 12.sp,
+                        color = TextSubDark,
+                        lineHeight = 16.sp
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
@@ -930,10 +910,10 @@ private fun AddUserDialog(
                     onClick = {
                         if (name.isBlank()) {
                             errorMessage = "Ingresa el nombre"
-                        } else if (email.isBlank()) {
-                            errorMessage = "Ingresa el correo"
+                        } else if (!consentimiento) {
+                            errorMessage = "Debes aceptar el consentimiento"
                         } else {
-                            onAddUser(name, email)
+                            onAddUser(name, consentimiento)
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Burgundy),
@@ -1001,6 +981,7 @@ private fun DeleteUserConfirmationDialog(
 @Composable
 private fun UserRowItem(
     name: String,
+    estado: String,
     onDelete: () -> Unit = {}
 ) {
     Row(
@@ -1018,13 +999,20 @@ private fun UserRowItem(
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        Text(
-            text = name,
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Medium,
-            color = TextDark,
-            modifier = Modifier.weight(1f)
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = name,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Medium,
+                color = TextDark
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = estado,
+                fontSize = 13.sp,
+                color = if (estado.lowercase() == "activo") Color(0xFF2E7D32) else TextGray
+            )
+        }
 
         IconButton(
             onClick = onDelete,
@@ -1447,7 +1435,7 @@ private fun BottomNavigationBar(
     val items = listOf(
         NavDestination("Inicio", HomeIcon),
         NavDestination("Camaras", ApertureCameraIcon),
-        NavDestination("Usuarios", UsersIcon),
+        NavDestination("Perfiles", UsersIcon),
         NavDestination("Actividad", CubeActivityIcon)
     )
 
@@ -1862,7 +1850,7 @@ fun DoorLockDetailPreview() {
                     onOpenLockDetail = {},
                     onChangePasscode = {},
                     onDownloadActivity = {},
-                    usersList = emptyList(),
+                    perfilesList = emptyList(),
                     activitiesList = emptyList(),
                     onAddUser = { _, _ -> },
                     onDeleteUser = {}
@@ -1889,7 +1877,7 @@ fun ActivityScreenPreview() {
                     .fillMaxSize()
                     .statusBarsPadding()
                     .navigationBarsPadding()
-                ) {
+            ) {
                 TopBarSection(
                     selectedNavIndex = 3,
                     isLockDetailOpen = false,
@@ -1911,7 +1899,7 @@ fun ActivityScreenPreview() {
                     onOpenLockDetail = {},
                     onChangePasscode = {},
                     onDownloadActivity = {},
-                    usersList = emptyList(),
+                    perfilesList = emptyList(),
                     activitiesList = emptyList(),
                     onAddUser = { _, _ -> },
                     onDeleteUser = {}
@@ -1960,7 +1948,7 @@ fun UsersScreenPreview() {
                     onOpenLockDetail = {},
                     onChangePasscode = {},
                     onDownloadActivity = {},
-                    usersList = emptyList(),
+                    perfilesList = emptyList(),
                     activitiesList = emptyList(),
                     onAddUser = { _, _ -> },
                     onDeleteUser = {}
@@ -2009,7 +1997,7 @@ fun CamerasScreenPreview() {
                     onOpenLockDetail = {},
                     onChangePasscode = {},
                     onDownloadActivity = {},
-                    usersList = emptyList(),
+                    perfilesList = emptyList(),
                     activitiesList = emptyList(),
                     onAddUser = { _, _ -> },
                     onDeleteUser = {}

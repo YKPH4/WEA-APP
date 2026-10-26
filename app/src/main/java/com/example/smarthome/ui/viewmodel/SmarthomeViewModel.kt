@@ -6,7 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.smarthome.data.models.RegistroActividad
-import com.example.smarthome.data.models.UsuarioApp
+import com.example.smarthome.data.models.PerfilRostro
 import com.example.smarthome.data.repository.SmarthomeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,8 +20,8 @@ class SmarthomeViewModel(
     private val _isDoorLocked = MutableStateFlow(true)
     val isDoorLocked: StateFlow<Boolean> = _isDoorLocked.asStateFlow()
 
-    private val _usersList = MutableStateFlow<List<UsuarioApp>>(emptyList())
-    val usersList: StateFlow<List<UsuarioApp>> = _usersList.asStateFlow()
+    private val _perfilesList = MutableStateFlow<List<PerfilRostro>>(emptyList())
+    val perfilesList: StateFlow<List<PerfilRostro>> = _perfilesList.asStateFlow()
 
     private val _activitiesList = MutableStateFlow<List<RegistroActividad>>(emptyList())
     val activitiesList: StateFlow<List<RegistroActividad>> = _activitiesList.asStateFlow()
@@ -34,27 +34,21 @@ class SmarthomeViewModel(
 
     fun loadAllData() {
         viewModelScope.launch {
-            // Restore User Preferences from Supabase
-            val prefs = repository.getUserPreferences()
-            if (prefs != null) {
-                _isDoorLocked.value = prefs.lastLockStatus
-            } else {
-                val dispositivo = repository.getDispositivo("Puerta principal")
-                if (dispositivo != null) {
-                    _isDoorLocked.value = dispositivo.isLocked
-                }
+            // Se toma el estado solo desde getDispositivo
+            val dispositivo = repository.getDispositivo("Puerta principal")
+            if (dispositivo != null) {
+                _isDoorLocked.value = dispositivo.isLocked
             }
 
-            // Fetch User's Isolated Data from Supabase
-            fetchUsers()
+            fetchPerfiles()
             fetchActivities()
         }
     }
 
-    fun fetchUsers() {
+    fun fetchPerfiles() {
         viewModelScope.launch {
-            val remoteUsers = repository.getUsuarios()
-            _usersList.value = remoteUsers
+            val remotePerfiles = repository.getPerfiles()
+            _perfilesList.value = remotePerfiles
         }
     }
 
@@ -67,11 +61,11 @@ class SmarthomeViewModel(
 
     fun toggleLock() {
         val previousState = _isDoorLocked.value
-        val newState = !previousState
-        _isDoorLocked.value = newState
 
         viewModelScope.launch {
-            repository.toggleLockStatus("Puerta principal", previousState)
+            // El estado final de la UI lo dicta la respuesta del repositorio
+            val newState = repository.toggleLockStatus("Puerta principal", previousState)
+            _isDoorLocked.value = newState
             fetchActivities()
         }
     }
@@ -83,27 +77,27 @@ class SmarthomeViewModel(
         }
     }
 
-    fun addUser(nombre: String, email: String, rol: String = "Invitado", onSuccess: () -> Unit = {}) {
+    fun crearPerfil(nombre: String, consentimiento: Boolean, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
-            val result = repository.addUsuario(nombre, email, rol)
+            val result = repository.crearPerfil(nombre, consentimiento)
             if (result.isSuccess) {
-                fetchUsers()
+                fetchPerfiles()
                 onSuccess()
             } else {
                 val err = result.exceptionOrNull()?.message ?: "Error al conectar con Supabase"
-                errorMessage = "Error de Supabase al agregar usuario:\n\n$err"
+                errorMessage = "Error de Supabase al agregar perfil:\n\n$err"
             }
         }
     }
 
-    fun deleteUser(user: UsuarioApp) {
+    fun eliminarPerfil(perfil: PerfilRostro) {
         viewModelScope.launch {
-            val result = repository.deleteUsuario(user)
+            val result = repository.eliminarPerfil(perfil)
             if (result.isSuccess) {
-                fetchUsers()
+                fetchPerfiles()
             } else {
                 val err = result.exceptionOrNull()?.message ?: "Error al eliminar en Supabase"
-                errorMessage = "Error de Supabase al eliminar usuario:\n\n$err"
+                errorMessage = "Error de Supabase al eliminar perfil:\n\n$err"
             }
         }
     }

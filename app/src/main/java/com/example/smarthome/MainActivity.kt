@@ -12,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.smarthome.data.repository.SmarthomeRepository
 import com.example.smarthome.ui.LoginScreen
 import com.example.smarthome.ui.RegisterScreen
 import com.example.smarthome.ui.SmartHomeScreen
@@ -19,8 +20,8 @@ import com.example.smarthome.ui.theme.SmarthomeTheme
 import com.example.smarthome.ui.viewmodel.SmarthomeViewModel
 
 enum class Screen {
-    Register,
     Login,
+    Register,
     Home
 }
 
@@ -30,7 +31,16 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             SmarthomeTheme {
-                var currentScreen by remember { mutableStateOf(Screen.Register) }
+                val repository = remember { SmarthomeRepository() }
+
+                // Si ya hay una sesión guardada, entra directo al panel.
+                // Si no, muestra el login.
+                var currentScreen by remember {
+                    mutableStateOf(
+                        if (repository.getCurrentUserId() != null) Screen.Home else Screen.Login
+                    )
+                }
+
                 val smarthomeViewModel: SmarthomeViewModel = viewModel()
 
                 Crossfade(
@@ -39,16 +49,16 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize()
                 ) { screen ->
                     when (screen) {
-                        Screen.Register -> {
-                            RegisterScreen(
-                                onNavigateToLogin = { currentScreen = Screen.Login },
-                                onRegisterSuccess = { currentScreen = Screen.Home }
-                            )
-                        }
                         Screen.Login -> {
                             LoginScreen(
                                 onNavigateToRegister = { currentScreen = Screen.Register },
                                 onLoginSuccess = { currentScreen = Screen.Home }
+                            )
+                        }
+                        Screen.Register -> {
+                            RegisterScreen(
+                                onNavigateToLogin = { currentScreen = Screen.Login },
+                                onRegisterSuccess = { currentScreen = Screen.Login }
                             )
                         }
                         Screen.Home -> {

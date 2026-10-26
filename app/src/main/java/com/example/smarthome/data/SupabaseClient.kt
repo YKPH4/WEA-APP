@@ -7,8 +7,8 @@ import io.github.jan.supabase.realtime.Realtime
 import io.ktor.client.engine.android.Android
 
 object SupabaseConfig {
-    const val SUPABASE_URL = "https://nbumuudjzbtwujdxclex.supabase.co"
-    const val SUPABASE_KEY = "sb_publishable_HyvYV0qAD4Ny3v18t8n25w_RCjkVaGx"
+    const val SUPABASE_URL = "https://hauzdxvdhgniejcsejdr.supabase.co"
+    const val SUPABASE_KEY = "sb_publishable_dcZ0h5hpp06nwQWFTUMmew_xJ0-CH3O"
 }
 
 val supabaseClient = createSupabaseClient(
