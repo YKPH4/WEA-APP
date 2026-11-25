@@ -3,86 +3,71 @@ package com.example.smarthome.data.repository
 import android.util.Log
 import com.example.smarthome.data.models.Dispositivo
 import com.example.smarthome.data.models.InsertDispositivoDto
+import com.example.smarthome.data.models.InsertPerfilRostroDto
 import com.example.smarthome.data.models.InsertRegistroActividadDto
-import com.example.smarthome.data.models.InsertUsuarioDto
+import com.example.smarthome.data.models.PerfilRostro
 import com.example.smarthome.data.models.RegistroActividad
-import com.example.smarthome.data.models.UserPreferences
-import com.example.smarthome.data.models.UsuarioApp
 import com.example.smarthome.data.supabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 class SmarthomeRepository {
 
     private val TAG = "SmarthomeRepository"
+    private val NOMBRE_CERRADURA = "Puerta principal"
 
-    fun getCurrentUserId(): String? {
-        return try {
-            supabaseClient.auth.currentUserOrNull()?.id
-        } catch (e: Exception) {
-            null
-        }
+    fun getCurrentUserId(): String? = try {
+        supabaseClient.auth.currentUserOrNull()?.id
+    } catch (e: Exception) {
+        null
     }
 
-    suspend fun seedInitialDispositivo(): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val disp = InsertDispositivoDto(
-                nombre = "Puerta principal",
-                estado = "Cerrada/Bloqueada",
-                isLocked = true,
-                claveAcceso = "1234"
-            )
-            supabaseClient.from("dispositivos").insert(disp)
-            Log.d(TAG, "Dispositivo sembrado exitosamente en Supabase")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Error al sembrar dispositivo en Supabase: ${e.message}", e)
-            false
-        }
+    // Solo cuentas con app_metadata.role = "admin" pueden gestionar el sistema.
+    fun esAdmin(): Boolean {
+        val user = supabaseClient.auth.currentUserOrNull() ?: return false
+        return user.appMetadata?.get("role")?.jsonPrimitive?.contentOrNull == "admin"
     }
 
-    // AUTHENTICATION
+    private fun ahoraIso(): String =
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }.format(Date())
+
+    // AUTENTICACIÓN
+
+    // El parámetro nombre ya no se guarda aquí. Puedes quitarlo cuando actualices RegisterScreen.
     suspend fun registerUser(nombre: String, email: String, pass: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            try {
-                supabaseClient.auth.signUpWith(Email) {
-                    this.email = email
-                    this.password = pass
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Auth signUp omitido o ya existente: ${e.message}")
+            supabaseClient.auth.signUpWith(Email) {
+                this.email = email
+                this.password = pass
             }
-
-            val currentId = getCurrentUserId()
-            val dto = InsertUsuarioDto(nombre = nombre, email = email, rol = "Dueño")
-            supabaseClient.from("usuarios").insert(dto)
-
-            val initialPrefs = UserPreferences(userId = currentId, lastLockStatus = true, passcode = "1234", selectedTab = 0)
-            saveUserPreferences(initialPrefs)
-
-            Log.d(TAG, "Usuario registrado en Supabase: $email")
+            Log.d(TAG, "Cuenta creada: $email")
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Error al registrar usuario en Supabase: ${e.message}", e)
+            Log.e(TAG, "Error al crear cuenta: ${e.message}", e)
             Result.failure(e)
         }
     }
 
     suspend fun loginUser(email: String, pass: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            try {
-                supabaseClient.auth.signInWith(Email) {
-                    this.email = email
-                    this.password = pass
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Auth signIn omitido: ${e.message}")
+            supabaseClient.auth.signInWith(Email) {
+                this.email = email
+                this.password = pass
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -100,152 +85,154 @@ class SmarthomeRepository {
         }
     }
 
-    // USER PREFERENCES / STATE PERSISTENCE
-    suspend fun getUserPreferences(): UserPreferences? = withContext(Dispatchers.IO) {
-        try {
-            val list = supabaseClient.from("user_preferences").select().decodeList<UserPreferences>()
-            list.firstOrNull()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error al obtener preferencias de usuario: ${e.message}", e)
-            null
-        }
-    }
+    // DISPOSITIVO / CERRADURA
 
-    suspend fun saveUserPreferences(prefs: UserPreferences): Boolean = withContext(Dispatchers.IO) {
+    suspend fun seedInitialDispositivo(): Boolean = withContext(Dispatchers.IO) {
         try {
-            supabaseClient.from("user_preferences").upsert(prefs)
-            Log.d(TAG, "Preferencias de usuario guardadas en Supabase: $prefs")
+            supabaseClient.from("dispositivos").insert(
+                InsertDispositivoDto(
+                    nombre = NOMBRE_CERRADURA,
+                    estado = "Cerrada/Bloqueada",
+                    isLocked = true
+                )
+            )
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Error al guardar preferencias de usuario: ${e.message}", e)
+            Log.e(TAG, "Error al crear dispositivo: ${e.message}", e)
             false
         }
     }
 
-    // DISPOSITIVOS / LOCK CONTROL
-    suspend fun getDispositivo(nombre: String = "Puerta principal"): Dispositivo? = withContext(Dispatchers.IO) {
+    suspend fun getDispositivo(nombre: String = NOMBRE_CERRADURA): Dispositivo? = withContext(Dispatchers.IO) {
         try {
-            val list = supabaseClient.from("dispositivos")
-                .select {
-                    filter { eq("nombre", nombre) }
-                }.decodeList<Dispositivo>()
-
-            Log.d(TAG, "Dispositivo obtenido de Supabase: $list")
-            list.firstOrNull()
+            supabaseClient.from("dispositivos")
+                .select { filter { eq("nombre", nombre) } }
+                .decodeList<Dispositivo>()
+                .firstOrNull()
         } catch (e: Exception) {
-            Log.e(TAG, "Error al obtener dispositivo de Supabase: ${e.message}", e)
+            Log.e(TAG, "Error al obtener dispositivo: ${e.message}", e)
             null
         }
     }
 
+    // Devuelve el estado que realmente quedó en la base.
+    // Si la escritura falla, devuelve el estado anterior para que la pantalla no mienta.
     suspend fun toggleLockStatus(nombre: String, currentlyLocked: Boolean): Boolean = withContext(Dispatchers.IO) {
+        if (!esAdmin()) {
+            Log.w(TAG, "Intento de cambiar la cerradura sin permisos de administrador")
+            return@withContext currentlyLocked
+        }
+
         val newLocked = !currentlyLocked
         val newEstado = if (newLocked) "Cerrada/Bloqueada" else "Abierta/Desbloqueada"
 
         try {
+            val dispositivo = getDispositivo(nombre)
+                ?: throw IllegalStateException("No existe el dispositivo '$nombre'")
+            val dispositivoId = dispositivo.id
+                ?: throw IllegalStateException("El dispositivo no tiene id")
+
             supabaseClient.from("dispositivos").update({
                 set("is_locked", newLocked)
                 set("estado", newEstado)
             }) {
-                filter { eq("nombre", nombre) }
+                filter { eq("id", dispositivoId) }
             }
 
-            // Record activity log event
-            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-            val dateFormat = SimpleDateFormat("MMM dd/yyyy", Locale.ENGLISH)
-            val now = Date()
-
-            val logDto = InsertRegistroActividadDto(
-                titulo = nombre,
-                estado = "Estado:$newEstado",
-                hora = timeFormat.format(now),
-                fecha = dateFormat.format(now).uppercase()
+            supabaseClient.from("actividades").insert(
+                InsertRegistroActividadDto(
+                    dispositivoId = dispositivoId,
+                    userId = getCurrentUserId(),
+                    titulo = nombre,
+                    estado = "Estado:$newEstado",
+                    resultado = "manual"
+                )
             )
-            supabaseClient.from("actividades").insert(logDto)
-            Log.d(TAG, "Estado de cerradura actualizado en Supabase: isLocked=$newLocked")
 
-            val currentPrefs = getUserPreferences() ?: UserPreferences(userId = getCurrentUserId())
-            saveUserPreferences(currentPrefs.copy(lastLockStatus = newLocked))
-
+            Log.d(TAG, "Cerradura actualizada: isLocked=$newLocked")
             newLocked
         } catch (e: Exception) {
-            Log.e(TAG, "Error al cambiar estado de cerradura en Supabase: ${e.message}", e)
-            newLocked
+            Log.e(TAG, "Error al cambiar la cerradura en Supabase: ${e.message}", e)
+            currentlyLocked
         }
     }
 
+    // PIN: se guarda como hash en la base mediante la función set_pin()
     suspend fun updatePasscode(nombre: String, newPasscode: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            supabaseClient.from("dispositivos").update({
-                set("clave_acceso", newPasscode)
-            }) {
-                filter { eq("nombre", nombre) }
-            }
+            if (!esAdmin()) return@withContext false
+            val dispositivoId = getDispositivo(nombre)?.id ?: return@withContext false
 
-            val currentPrefs = getUserPreferences() ?: UserPreferences(userId = getCurrentUserId())
-            saveUserPreferences(currentPrefs.copy(passcode = newPasscode))
+            supabaseClient.postgrest.rpc("set_pin", buildJsonObject {
+                put("p_dispositivo", dispositivoId)
+                put("p_pin", newPasscode)
+            })
 
-            Log.d(TAG, "Clave de acceso actualizada en Supabase")
+            Log.d(TAG, "PIN actualizado")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Error al actualizar clave en Supabase: ${e.message}", e)
+            Log.e(TAG, "Error al actualizar el PIN: ${e.message}", e)
             false
         }
     }
 
-    // USERS
-    suspend fun getUsuarios(): List<UsuarioApp> = withContext(Dispatchers.IO) {
+    // PERFILES DE ROSTRO (reemplaza a usuarios)
+
+    suspend fun getPerfiles(): List<PerfilRostro> = withContext(Dispatchers.IO) {
         try {
-            val list = supabaseClient.from("usuarios").select().decodeList<UsuarioApp>()
-            Log.d(TAG, "Usuarios obtenidos de Supabase: count=${list.size}, list=$list")
-            list
+            supabaseClient.from("perfiles_rostro")
+                .select { order("created_at", order = Order.DESCENDING) }
+                .decodeList<PerfilRostro>()
         } catch (e: Exception) {
-            Log.e(TAG, "Error al obtener usuarios de Supabase: ${e.message}", e)
+            Log.e(TAG, "Error al obtener perfiles: ${e.message}", e)
             emptyList()
         }
     }
 
-    suspend fun addUsuario(nombre: String, email: String, rol: String = "Invitado"): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun crearPerfil(nombre: String, consentimiento: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val dto = InsertUsuarioDto(nombre = nombre, email = email, rol = rol)
-            supabaseClient.from("usuarios").insert(dto)
-            Log.d(TAG, "Usuario insertado exitosamente en Supabase: $nombre ($email)")
+            require(esAdmin()) { "Solo el administrador puede crear perfiles" }
+            require(consentimiento) { "Falta el consentimiento de la persona" }
+            require(nombre.isNotBlank()) { "El nombre es obligatorio" }
+
+            supabaseClient.from("perfiles_rostro").insert(
+                InsertPerfilRostroDto(
+                    nombre = nombre.trim(),
+                    consentimientoAt = ahoraIso()
+                )
+            )
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Error al insertar usuario en Supabase: ${e.message}", e)
+            Log.e(TAG, "Error al crear perfil: ${e.message}", e)
             Result.failure(e)
         }
     }
 
-    suspend fun deleteUsuario(user: UsuarioApp): Result<Unit> = withContext(Dispatchers.IO) {
+    // Borra la fila. Las fotos del bucket las borra el servidor.
+    suspend fun eliminarPerfil(perfil: PerfilRostro): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            supabaseClient.from("usuarios").delete {
-                filter {
-                    if (!user.id.isNullOrBlank()) {
-                        eq("id", user.id)
-                    } else if (user.email.isNotBlank()) {
-                        eq("email", user.email)
-                    } else {
-                        eq("nombre", user.nombre)
-                    }
-                }
+            require(esAdmin()) { "Solo el administrador puede eliminar perfiles" }
+            val id = perfil.id ?: throw IllegalArgumentException("El perfil no tiene id")
+
+            supabaseClient.from("perfiles_rostro").delete {
+                filter { eq("id", id) }
             }
-            Log.d(TAG, "Usuario eliminado de Supabase: ${user.nombre}")
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Error al eliminar usuario en Supabase: ${e.message}", e)
+            Log.e(TAG, "Error al eliminar perfil: ${e.message}", e)
             Result.failure(e)
         }
     }
 
-    // ACTIVITIES
+    // ACTIVIDADES
+
     suspend fun getActividades(): List<RegistroActividad> = withContext(Dispatchers.IO) {
         try {
-            val list = supabaseClient.from("actividades").select().decodeList<RegistroActividad>()
-            Log.d(TAG, "Actividades obtenidas de Supabase: count=${list.size}")
-            list
+            supabaseClient.from("actividades")
+                .select { order("created_at", order = Order.DESCENDING) }
+                .decodeList<RegistroActividad>()
         } catch (e: Exception) {
-            Log.e(TAG, "Error al obtener actividades de Supabase: ${e.message}", e)
+            Log.e(TAG, "Error al obtener actividades: ${e.message}", e)
             emptyList()
         }
     }

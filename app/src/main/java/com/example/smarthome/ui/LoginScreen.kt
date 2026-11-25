@@ -27,13 +27,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.painterResource
-import com.example.smarthome.R
-import com.example.smarthome.data.repository.SmarthomeRepository
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -41,8 +38,11 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.smarthome.R
+import com.example.smarthome.data.repository.SmarthomeRepository
 import com.example.smarthome.ui.theme.SmarthomeTheme
 import com.example.smarthome.ui.theme.Subtext
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -53,6 +53,11 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var errorLogin by remember { mutableStateOf<String?>(null) }
+    var cargando by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
+    val repository = remember { SmarthomeRepository() }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -100,7 +105,10 @@ fun LoginScreen(
             // Form Fields
             CustomOutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = {
+                    email = it
+                    errorLogin = null
+                },
                 placeholder = "Email",
                 keyboardType = KeyboardType.Email
             )
@@ -109,7 +117,10 @@ fun LoginScreen(
 
             CustomOutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    errorLogin = null
+                },
                 placeholder = "Contraseña",
                 isPassword = true
             )
@@ -176,19 +187,43 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // "Iniciar" Button
-            val scope = rememberCoroutineScope()
-            val repository = remember { SmarthomeRepository() }
+            // Mensaje de error
+            errorLogin?.let {
+                Text(
+                    text = it,
+                    color = Color.Red,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
+            // "Iniciar" Button
             Button(
                 onClick = {
                     scope.launch {
-                        if (email.isNotBlank()) {
-                            repository.loginUser(email, password)
+                        if (email.isBlank() || password.isBlank()) {
+                            errorLogin = "Escribe el correo y la contraseña"
+                            return@launch
                         }
-                        onLoginSuccess()
+
+                        cargando = true
+                        val resultado = repository.loginUser(email.trim(), password)
+                        cargando = false
+
+                        resultado
+                            .onSuccess {
+                                errorLogin = null
+                                onLoginSuccess()
+                            }
+                            .onFailure {
+                                errorLogin = "Correo o contraseña incorrectos"
+                            }
                     }
                 },
+                enabled = !cargando,
                 colors = ButtonDefaults.buttonColors(containerColor = Burgundy),
                 shape = RoundedCornerShape(28.dp),
                 modifier = Modifier
@@ -196,7 +231,7 @@ fun LoginScreen(
                     .height(56.dp)
             ) {
                 Text(
-                    text = "Iniciar",
+                    text = if (cargando) "Entrando..." else "Iniciar",
                     color = Color.White,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold
