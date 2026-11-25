@@ -16,10 +16,12 @@ import com.example.smarthome.data.repository.SmarthomeRepository
 import com.example.smarthome.ui.LoginScreen
 import com.example.smarthome.ui.RegisterScreen
 import com.example.smarthome.ui.SmartHomeScreen
+import com.example.smarthome.ui.WelcomeScreen
 import com.example.smarthome.ui.theme.SmarthomeTheme
 import com.example.smarthome.ui.viewmodel.SmarthomeViewModel
 
 enum class Screen {
+    Welcome,
     Login,
     Register,
     Home
@@ -33,11 +35,11 @@ class MainActivity : ComponentActivity() {
             SmarthomeTheme {
                 val repository = remember { SmarthomeRepository() }
 
-                // Si ya hay una sesión guardada, entra directo al panel.
-                // Si no, muestra el login.
+                // Si ya hay una sesión guardada, entra directo al panel;
+                // si no, muestra la pantalla de bienvenida.
                 var currentScreen by remember {
                     mutableStateOf(
-                        if (repository.getCurrentUserId() != null) Screen.Home else Screen.Login
+                        if (repository.getCurrentUserId() != null) Screen.Home else Screen.Welcome
                     )
                 }
 
@@ -49,22 +51,30 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize()
                 ) { screen ->
                     when (screen) {
+                        Screen.Welcome -> {
+                            WelcomeScreen(
+                                onNavigateToRegister = { currentScreen = Screen.Register },
+                                onNavigateToLogin = { currentScreen = Screen.Login }
+                            )
+                        }
                         Screen.Login -> {
                             LoginScreen(
                                 onNavigateToRegister = { currentScreen = Screen.Register },
-                                onLoginSuccess = { currentScreen = Screen.Home }
+                                onLoginSuccess = { currentScreen = Screen.Home },
+                                onNavigateToWelcome = { currentScreen = Screen.Welcome }
                             )
                         }
                         Screen.Register -> {
                             RegisterScreen(
                                 onNavigateToLogin = { currentScreen = Screen.Login },
-                                onRegisterSuccess = { currentScreen = Screen.Login }
+                                onRegisterSuccess = { currentScreen = Screen.Home },
+                                onNavigateToWelcome = { currentScreen = Screen.Welcome }
                             )
                         }
                         Screen.Home -> {
                             SmartHomeScreen(
                                 viewModel = smarthomeViewModel,
-                                onLogout = { currentScreen = Screen.Login }
+                                onLogout = { currentScreen = Screen.Welcome }
                             )
                         }
                     }

@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -37,12 +38,15 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.smarthome.R
 import com.example.smarthome.data.repository.SmarthomeRepository
 import com.example.smarthome.ui.theme.SmarthomeTheme
+import com.example.smarthome.ui.theme.Subtext
 import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
+    onNavigateToWelcome: () -> Unit,
     onNavigateToRegister: () -> Unit,
     onLoginSuccess: () -> Unit,
     modifier: Modifier = Modifier
@@ -75,11 +79,11 @@ fun LoginScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = onNavigateToRegister,
+                    onClick = onNavigateToWelcome,
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        imageVector = BackArrowIcon,
+                        painter = painterResource(id = R.drawable.chevrolet),
                         contentDescription = "Volver",
                         tint = Burgundy,
                         modifier = Modifier.size(24.dp)
@@ -159,24 +163,24 @@ fun LoginScreen(
             ) {
                 Text(
                     text = "Aceptaste los ",
-                    fontSize = 13.sp,
+                    fontSize = 10.sp,
                     color = TextSubDark
                 )
                 Text(
                     text = "Politicas de Privacidad",
-                    fontSize = 13.sp,
-                    color = TextSubDark,
+                    fontSize = 10.sp,
+                    color = Subtext,
                     textDecoration = TextDecoration.Underline
                 )
                 Text(
                     text = " y ",
-                    fontSize = 13.sp,
+                    fontSize = 10.sp,
                     color = TextSubDark
                 )
                 Text(
-                    text = "Terminos de Uso",
-                    fontSize = 13.sp,
-                    color = TextSubDark,
+                    text = "Terminos",
+                    fontSize = 10.sp,
+                    color = Subtext,
                     textDecoration = TextDecoration.Underline
                 )
             }
@@ -234,7 +238,7 @@ fun LoginScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(30.dp))
         }
     }
 }
@@ -245,7 +249,8 @@ fun LoginScreenPreview() {
     SmarthomeTheme {
         LoginScreen(
             onNavigateToRegister = {},
-            onLoginSuccess = {}
+            onLoginSuccess = {},
+            onNavigateToWelcome = {}
         )
     }
 }
