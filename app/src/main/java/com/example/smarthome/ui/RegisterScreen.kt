@@ -3,6 +3,7 @@ package com.example.smarthome.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,6 +60,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.smarthome.ui.theme.*
 import com.example.smarthome.ui.theme.SmarthomeTheme
 import com.example.smarthome.ui.theme.Subtext
 
@@ -301,12 +303,15 @@ fun CustomOutlinedTextField(
     keyboardType: KeyboardType = KeyboardType.Text
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
+    val isDark = isSystemInDarkTheme()
+    val bgColor = if (isDark) Color(0xFF2C2C2C) else Color(0xFFEBEBEB)
+    val placeholderColor = if (isDark) Color(0xFFA1A1A6) else Color(0xFF757575)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(52.dp)
-            .background(Color(0xFFEBEBEB), RoundedCornerShape(16.dp))
+            .background(bgColor, RoundedCornerShape(16.dp))
             .border(1.dp, Burgundy, RoundedCornerShape(16.dp))
             .padding(horizontal = 16.dp),
         contentAlignment = Alignment.CenterStart
@@ -320,7 +325,7 @@ fun CustomOutlinedTextField(
                     Text(
                         text = placeholder,
                         fontSize = 15.sp,
-                        color = Color(0xFF757575),
+                        color = placeholderColor,
                         fontWeight = FontWeight.Normal
                     )
                 }
@@ -349,7 +354,7 @@ fun CustomOutlinedTextField(
                     Icon(
                         imageVector = EyeOffIcon,
                         contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña",
-                        tint = Color(0xFF757575),
+                        tint = placeholderColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -367,7 +372,7 @@ val BackArrowIcon: ImageVector
         viewportHeight = 24f
     ).apply {
         path(
-            fill = SolidColor(Burgundy)
+            fill = SolidColor(Color(0xFF7A2024))
         ) {
             moveTo(15.41f, 16.59f)
             lineTo(10.83f, 12f)

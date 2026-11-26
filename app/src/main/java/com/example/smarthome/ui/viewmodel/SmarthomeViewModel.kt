@@ -65,21 +65,46 @@ class SmarthomeViewModel(
         }
     }
 
-    fun toggleLock() {
+    fun toggleLock(context: android.content.Context, onComplete: (Boolean, String) -> Unit) {
         val previousState = _isDoorLocked.value
         val newState = !previousState
-        _isDoorLocked.value = newState
 
         viewModelScope.launch {
-            repository.toggleLockStatus("Puerta principal", previousState)
-            fetchActivities()
+            try {
+                val bleManager = com.example.smarthome.ble.BleManager(context)
+                val command = if (newState) "CLOSE" else "OPEN"
+                val result = bleManager.sendCommand(command)
+                
+                if (result.isSuccess) {
+                    _isDoorLocked.value = newState
+                    repository.toggleLockStatus("Puerta principal", previousState)
+                    fetchActivities()
+                    onComplete(true, if (newState) "Puerta cerrada" else "Puerta abierta")
+                } else {
+                    onComplete(false, result.exceptionOrNull()?.message ?: "Error al operar cerradura")
+                }
+            } catch (e: Exception) {
+                onComplete(false, "Error de conexión Bluetooth: ${e.message}")
+            }
         }
     }
 
-    fun updatePasscode(newPasscode: String, onComplete: () -> Unit = {}) {
+    fun updatePasscode(context: android.content.Context, oldPasscode: String, newPasscode: String, onComplete: (Boolean, String) -> Unit) {
         viewModelScope.launch {
-            repository.updatePasscode("Puerta principal", newPasscode)
-            onComplete()
+            try {
+                val bleManager = com.example.smarthome.ble.BleManager(context)
+                val result = bleManager.sendCommand("$oldPasscode,$newPasscode")
+                
+                if (result.isSuccess) {
+                    // Actualizar también en la nube de forma opcional (mantenemos Supabase por si acaso)
+                    repository.updatePasscode("Puerta principal", newPasscode)
+                    onComplete(true, "Contraseña actualizada exitosamente")
+                } else {
+                    onComplete(false, result.exceptionOrNull()?.message ?: "Error al cambiar contraseña")
+                }
+            } catch (e: Exception) {
+                onComplete(false, "Error de conexión Bluetooth: ${e.message}")
+            }
         }
     }
 

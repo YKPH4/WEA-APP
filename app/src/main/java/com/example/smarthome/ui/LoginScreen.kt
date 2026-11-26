@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.smarthome.ui.theme.*
 import com.example.smarthome.ui.theme.SmarthomeTheme
 import com.example.smarthome.ui.theme.Subtext
 
