@@ -93,7 +93,7 @@ fun SmartHomeScreen(
     val context = LocalContext.current
 
     val isDoorLocked by viewModel.isDoorLocked.collectAsState()
-    val usersList by viewModel.usersList.collectAsState()
+    val perfilesList by viewModel.perfilesList.collectAsState()
     val activitiesList by viewModel.activitiesList.collectAsState()
 
     Surface(
@@ -149,10 +149,10 @@ fun SmartHomeScreen(
                         Toast.LENGTH_LONG
                     ).show()
                 },
-                usersList = usersList,
+                perfilesList = perfilesList,
                 activitiesList = activitiesList,
-                onAddUser = { name, email -> viewModel.addUser(name, email) },
-                onDeleteUser = { userToDelete -> viewModel.deleteUser(userToDelete) }
+                onAddPerfil = { name, consent -> viewModel.crearPerfil(name, consent) },
+                onDeletePerfil = { perfilToDelete -> viewModel.eliminarPerfil(perfilToDelete) }
             )
 
             // Bottom Navigation Bar
@@ -293,10 +293,10 @@ private fun MainContentCard(
     onOpenLockDetail: () -> Unit,
     onChangePasscode: () -> Unit,
     onDownloadActivity: () -> Unit,
-    usersList: List<com.example.smarthome.data.models.UsuarioApp>,
+    perfilesList: List<com.example.smarthome.data.models.PerfilRostro>,
     activitiesList: List<com.example.smarthome.data.models.RegistroActividad>,
-    onAddUser: (String, String) -> Unit,
-    onDeleteUser: (com.example.smarthome.data.models.UsuarioApp) -> Unit
+    onAddPerfil: (String, Boolean) -> Unit,
+    onDeletePerfil: (com.example.smarthome.data.models.PerfilRostro) -> Unit
 ) {
     Surface(
         modifier = modifier,
@@ -321,9 +321,9 @@ private fun MainContentCard(
             }
             selectedNavIndex == 1 -> CamerasContent()
             selectedNavIndex == 2 -> UsersContent(
-                usersList = usersList,
-                onAddUser = onAddUser,
-                onDeleteUser = onDeleteUser
+                perfilesList = perfilesList,
+                onAddPerfil = onAddPerfil,
+                onDeletePerfil = onDeletePerfil
             )
             selectedNavIndex == 3 -> ActivityContent(
                 activitiesList = activitiesList,
@@ -605,16 +605,13 @@ private fun CameraCard(
 // USERS CONTENT
 @Composable
 private fun UsersContent(
-    usersList: List<com.example.smarthome.data.models.UsuarioApp>,
-    onAddUser: (String, String) -> Unit,
-    onDeleteUser: (com.example.smarthome.data.models.UsuarioApp) -> Unit
+    perfilesList: List<com.example.smarthome.data.models.PerfilRostro>,
+    onAddPerfil: (String, Boolean) -> Unit,
+    onDeletePerfil: (com.example.smarthome.data.models.PerfilRostro) -> Unit
 ) {
     val context = LocalContext.current
     var showAddDialog by remember { mutableStateOf(false) }
-    var userToDelete by remember { mutableStateOf<com.example.smarthome.data.models.UsuarioApp?>(null) }
-
-    val owners = usersList.filter { it.rol.lowercase() == "dueño" }
-    val guests = usersList.filter { it.rol.lowercase() != "dueño" }
+    var perfilToDelete by remember { mutableStateOf<com.example.smarthome.data.models.PerfilRostro?>(null) }
 
     Column(
         modifier = Modifier
@@ -657,9 +654,9 @@ private fun UsersContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Owner Section
+        // Perfiles Section
         Text(
-            text = "Dueño",
+            text = "Perfiles de rostro",
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             color = TextDark
@@ -667,46 +664,17 @@ private fun UsersContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        if (owners.isNotEmpty()) {
-            owners.forEach { owner ->
+        if (perfilesList.isNotEmpty()) {
+            perfilesList.forEach { perfil ->
                 UserRowItem(
-                    name = owner.nombre,
-                    onDelete = { userToDelete = owner }
+                    name = perfil.nombre,
+                    onDelete = { perfilToDelete = perfil }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
         } else {
             Text(
-                text = "Sin dueño registrado",
-                fontSize = 14.sp,
-                color = TextGray,
-                modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 4.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Guests Section
-        Text(
-            text = "Invitados",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
-            color = TextDark
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        if (guests.isNotEmpty()) {
-            guests.forEach { guest ->
-                UserRowItem(
-                    name = guest.nombre,
-                    onDelete = { userToDelete = guest }
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-        } else {
-            Text(
-                text = "Sin invitados agregados",
+                text = "Sin perfiles registrados",
                 fontSize = 14.sp,
                 color = TextGray,
                 modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 4.dp)
@@ -714,28 +682,28 @@ private fun UsersContent(
         }
     }
 
-    // Add User Dialog
+    // Add Perfil Dialog
     if (showAddDialog) {
         AddUserDialog(
             onDismiss = { showAddDialog = false },
-            onAddUser = { newName, newEmail ->
+            onAddPerfil = { newName, consent ->
                 showAddDialog = false
-                onAddUser(newName, newEmail)
-                Toast.makeText(context, "Usuario agregado exitosamente", Toast.LENGTH_SHORT).show()
+                onAddPerfil(newName, consent)
+                Toast.makeText(context, "Perfil agregado exitosamente", Toast.LENGTH_SHORT).show()
             }
         )
     }
 
-    // Delete User Confirmation Dialog
-    if (userToDelete != null) {
+    // Delete Perfil Confirmation Dialog
+    if (perfilToDelete != null) {
         DeleteUserConfirmationDialog(
-            userName = userToDelete!!.nombre,
-            onDismiss = { userToDelete = null },
+            userName = perfilToDelete!!.nombre,
+            onDismiss = { perfilToDelete = null },
             onConfirmDelete = {
-                val target = userToDelete!!
-                userToDelete = null
-                onDeleteUser(target)
-                Toast.makeText(context, "Usuario eliminado de los accesos", Toast.LENGTH_SHORT).show()
+                val target = perfilToDelete!!
+                perfilToDelete = null
+                onDeletePerfil(target)
+                Toast.makeText(context, "Perfil eliminado de los accesos", Toast.LENGTH_SHORT).show()
             }
         )
     }
@@ -744,10 +712,10 @@ private fun UsersContent(
 @Composable
 private fun AddUserDialog(
     onDismiss: () -> Unit,
-    onAddUser: (String, String) -> Unit
+    onAddPerfil: (String, Boolean) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    var consentimiento by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf("") }
     val context = LocalContext.current
 
@@ -755,7 +723,7 @@ private fun AddUserDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Agregar nuevo usuario",
+                text = "Agregar nuevo perfil",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextDark,
@@ -778,12 +746,22 @@ private fun AddUserDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                CustomOutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    placeholder = "Email",
-                    keyboardType = KeyboardType.Email
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                ) {
+                    Checkbox(
+                        checked = consentimiento,
+                        onCheckedChange = { consentimiento = it },
+                        colors = CheckboxDefaults.colors(checkedColor = Burgundy)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Consentimiento de rostro",
+                        fontSize = 14.sp,
+                        color = TextSubDark
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
@@ -842,10 +820,10 @@ private fun AddUserDialog(
                     onClick = {
                         if (name.isBlank()) {
                             errorMessage = "Ingresa el nombre"
-                        } else if (email.isBlank()) {
-                            errorMessage = "Ingresa el correo"
+                        } else if (!consentimiento) {
+                            errorMessage = "Se requiere consentimiento"
                         } else {
-                            onAddUser(name, email)
+                            onAddPerfil(name, consentimiento)
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Burgundy),
@@ -1659,10 +1637,10 @@ fun DoorLockDetailPreview() {
                     onOpenLockDetail = {},
                     onChangePasscode = {},
                     onDownloadActivity = {},
-                    usersList = emptyList(),
+                    perfilesList = emptyList(),
                     activitiesList = emptyList(),
-                    onAddUser = { _, _ -> },
-                    onDeleteUser = {}
+                    onAddPerfil = { _, _ -> },
+                    onDeletePerfil = {}
                 )
                 BottomNavigationBar(
                     selectedIndex = 0,
@@ -1708,10 +1686,10 @@ fun ActivityScreenPreview() {
                     onOpenLockDetail = {},
                     onChangePasscode = {},
                     onDownloadActivity = {},
-                    usersList = emptyList(),
+                    perfilesList = emptyList(),
                     activitiesList = emptyList(),
-                    onAddUser = { _, _ -> },
-                    onDeleteUser = {}
+                    onAddPerfil = { _, _ -> },
+                    onDeletePerfil = {}
                 )
                 BottomNavigationBar(
                     selectedIndex = 3,
@@ -1757,10 +1735,10 @@ fun UsersScreenPreview() {
                     onOpenLockDetail = {},
                     onChangePasscode = {},
                     onDownloadActivity = {},
-                    usersList = emptyList(),
+                    perfilesList = emptyList(),
                     activitiesList = emptyList(),
-                    onAddUser = { _, _ -> },
-                    onDeleteUser = {}
+                    onAddPerfil = { _, _ -> },
+                    onDeletePerfil = {}
                 )
                 BottomNavigationBar(
                     selectedIndex = 2,
@@ -1806,10 +1784,10 @@ fun CamerasScreenPreview() {
                     onOpenLockDetail = {},
                     onChangePasscode = {},
                     onDownloadActivity = {},
-                    usersList = emptyList(),
+                    perfilesList = emptyList(),
                     activitiesList = emptyList(),
-                    onAddUser = { _, _ -> },
-                    onDeleteUser = {}
+                    onAddPerfil = { _, _ -> },
+                    onDeletePerfil = {}
                 )
                 BottomNavigationBar(
                     selectedIndex = 1,
@@ -1827,7 +1805,7 @@ fun AddUserDialogPreview() {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             AddUserDialog(
                 onDismiss = {},
-                onAddUser = { _, _ -> }
+                onAddPerfil = { _, _ -> }
             )
         }
     }
