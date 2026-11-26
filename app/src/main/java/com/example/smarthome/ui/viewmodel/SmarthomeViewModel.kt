@@ -6,7 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.smarthome.data.models.RegistroActividad
-import com.example.smarthome.data.models.UsuarioApp
+import com.example.smarthome.data.models.PerfilRostro
 import com.example.smarthome.data.repository.SmarthomeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,8 +20,8 @@ class SmarthomeViewModel(
     private val _isDoorLocked = MutableStateFlow(true)
     val isDoorLocked: StateFlow<Boolean> = _isDoorLocked.asStateFlow()
 
-    private val _usersList = MutableStateFlow<List<UsuarioApp>>(emptyList())
-    val usersList: StateFlow<List<UsuarioApp>> = _usersList.asStateFlow()
+    private val _perfilesList = MutableStateFlow<List<PerfilRostro>>(emptyList())
+    val perfilesList: StateFlow<List<PerfilRostro>> = _perfilesList.asStateFlow()
 
     private val _activitiesList = MutableStateFlow<List<RegistroActividad>>(emptyList())
     val activitiesList: StateFlow<List<RegistroActividad>> = _activitiesList.asStateFlow()
@@ -65,46 +65,21 @@ class SmarthomeViewModel(
         }
     }
 
-    fun toggleLock(context: android.content.Context, onComplete: (Boolean, String) -> Unit) {
+    fun toggleLock() {
         val previousState = _isDoorLocked.value
         val newState = !previousState
+        _isDoorLocked.value = newState
 
         viewModelScope.launch {
-            try {
-                val bleManager = com.example.smarthome.ble.BleManager(context)
-                val command = if (newState) "CLOSE" else "OPEN"
-                val result = bleManager.sendCommand(command)
-                
-                if (result.isSuccess) {
-                    _isDoorLocked.value = newState
-                    repository.toggleLockStatus("Puerta principal", previousState)
-                    fetchActivities()
-                    onComplete(true, if (newState) "Puerta cerrada" else "Puerta abierta")
-                } else {
-                    onComplete(false, result.exceptionOrNull()?.message ?: "Error al operar cerradura")
-                }
-            } catch (e: Exception) {
-                onComplete(false, "Error de conexión Bluetooth: ${e.message}")
-            }
+            repository.toggleLockStatus("Puerta principal", previousState)
+            fetchActivities()
         }
     }
 
-    fun updatePasscode(context: android.content.Context, oldPasscode: String, newPasscode: String, onComplete: (Boolean, String) -> Unit) {
+    fun updatePasscode(newPasscode: String, onComplete: () -> Unit = {}) {
         viewModelScope.launch {
-            try {
-                val bleManager = com.example.smarthome.ble.BleManager(context)
-                val result = bleManager.sendCommand("$oldPasscode,$newPasscode")
-                
-                if (result.isSuccess) {
-                    // Actualizar también en la nube de forma opcional (mantenemos Supabase por si acaso)
-                    repository.updatePasscode("Puerta principal", newPasscode)
-                    onComplete(true, "Contraseña actualizada exitosamente")
-                } else {
-                    onComplete(false, result.exceptionOrNull()?.message ?: "Error al cambiar contraseña")
-                }
-            } catch (e: Exception) {
-                onComplete(false, "Error de conexión Bluetooth: ${e.message}")
-            }
+            repository.updatePasscode("Puerta principal", newPasscode)
+            onComplete()
         }
     }
 

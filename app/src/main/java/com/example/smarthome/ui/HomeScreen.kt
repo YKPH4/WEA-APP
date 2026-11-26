@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -66,11 +68,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.smarthome.ui.theme.*
 import com.example.smarthome.ui.theme.SmarthomeTheme
 import com.example.smarthome.ui.viewmodel.SmarthomeViewModel
 
-// Colors are now handled by Theme.kt
+// Colors
+val Burgundy = Color(0xFF7A2024)
+val ScreenBackground = Color(0xFFF4F4F5)
+val CardBackground = Color(0xFFE8E8EA)
+val TextDark = Color(0xFF000000)
+val TextGray = Color(0xFF7D7D82)
+val TextSubDark = Color(0xFF2C2C2C)
 
 @Composable
 fun SmartHomeScreen(
@@ -132,11 +139,7 @@ fun SmartHomeScreen(
                 selectedTab = selectedTab,
                 onTabSelected = { selectedTab = it },
                 isDoorLocked = isDoorLocked,
-                onToggleDoorLock = { 
-                    viewModel.toggleLock(context) { success, message ->
-                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                    }
-                },
+                onToggleDoorLock = { viewModel.toggleLock() },
                 onOpenLockDetail = { isLockDetailOpen = true },
                 onChangePasscode = { showChangePasscodeDialog = true },
                 onDownloadActivity = {
@@ -166,14 +169,14 @@ fun SmartHomeScreen(
         if (showChangePasscodeDialog) {
             ChangePasscodeDialog(
                 onDismiss = { showChangePasscodeDialog = false },
-                onSave = { currentCode, newPasscode ->
-                    viewModel.updatePasscode(context, currentCode, newPasscode) { success, message ->
-                        if (success) {
-                            showChangePasscodeDialog = false
-                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                        } else {
-                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                        }
+                onSave = { newPasscode ->
+                    showChangePasscodeDialog = false
+                    viewModel.updatePasscode(newPasscode) {
+                        Toast.makeText(
+                            context,
+                            "Clave de acceso actualizada exitosamente",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                 }
             )
@@ -437,7 +440,7 @@ private fun DoorLockDetailContent(
 @Composable
 private fun ChangePasscodeDialog(
     onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit
+    onSave: (String) -> Unit
 ) {
     var currentCode by remember { mutableStateOf("") }
     var newCode by remember { mutableStateOf("") }
@@ -494,14 +497,12 @@ private fun ChangePasscodeDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (currentCode.isEmpty()) {
-                        errorMessage = "Ingresa la clave actual"
-                    } else if (newCode.length != 4 || !newCode.all { it.isDigit() }) {
-                        errorMessage = "La nueva clave debe tener 4 dígitos"
+                    if (newCode.isEmpty()) {
+                        errorMessage = "Ingresa la nueva clave"
                     } else if (newCode != confirmCode) {
                         errorMessage = "Las claves no coinciden"
                     } else {
-                        onSave(currentCode, newCode)
+                        onSave(newCode)
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Burgundy),
@@ -1484,7 +1485,7 @@ val CalendarIcon: ImageVector
         viewportHeight = 24f
     ).apply {
         path(
-            stroke = SolidColor(Color(0xFF7A2024)),
+            stroke = SolidColor(Burgundy),
             strokeLineWidth = 2f,
             strokeLineCap = StrokeCap.Round,
             strokeLineJoin = StrokeJoin.Round
@@ -1542,7 +1543,7 @@ val WrenchIcon: ImageVector
         viewportHeight = 24f
     ).apply {
         path(
-            stroke = SolidColor(Color(0xFF7A2024)),
+            stroke = SolidColor(Burgundy),
             strokeLineWidth = 2f,
             strokeLineCap = StrokeCap.Round,
             strokeLineJoin = StrokeJoin.Round
@@ -1573,7 +1574,7 @@ val SlidersIcon: ImageVector
         viewportHeight = 24f
     ).apply {
         path(
-            stroke = SolidColor(Color(0xFF7A2024)),
+            stroke = SolidColor(Burgundy),
             strokeLineWidth = 2f,
             strokeLineCap = StrokeCap.Round
         ) {
@@ -1603,7 +1604,7 @@ val ForwardArrowIcon: ImageVector
         viewportHeight = 24f
     ).apply {
         path(
-            fill = SolidColor(Color(0xFF7A2024))
+            fill = SolidColor(Burgundy)
         ) {
             moveTo(8.59f, 16.59f)
             lineTo(13.17f, 12f)
